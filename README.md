@@ -1,12 +1,11 @@
 # BiLSTM-CRF-ChineseNER.pytorch
-PyTorch implement of BiLSTM-CRF for Chinese NER
+PyTorch implementation of BiLSTM-CRF for Chinese NER
 
 
 Requires: 
 
-* PyTorch 0.4.1
-
-* Numpy
+- PyTorch 2.2.1
+- Numpy 1.26.4
 
 Just run `python main.py --mode=train` 
 

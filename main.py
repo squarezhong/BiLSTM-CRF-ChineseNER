@@ -8,8 +8,10 @@ parser.add_argument('--batch-size', type=int, default=64,
                     help='batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
-parser.add_argument('--use-cuda', action='store_true',
+parser.add_argument('--use-cuda', action='store_true', default=False,
                     help='enables cuda')
+parser.add_argument('--use-mps', action='store_true', default=False,
+                    help='enables mps')
 parser.add_argument('--lr', type=float, default=0.001,
                     help='learning rate')
 parser.add_argument('--use-crf', action='store_true',
@@ -43,31 +45,37 @@ parser.add_argument('--result-path', type=str, default='./result',
 args = parser.parse_args()
 
 import torch 
-torch.manual_seed(args.seed)
-args.use_cuda = True
-
-
+from model import Model
 
 # load data
+import os 
+import time 
 from data_loader import DataLoader
 from data import read_corpus, tag2label
-import os 
 from eval import conlleval
+
+torch.manual_seed(args.seed)
 
 
 sents_train, labels_train, args.word_size, _ = read_corpus(os.path.join('.', args.data, 'source_data.txt'), os.path.join('.', args.data, 'source_label.txt'))
 sents_test, labels_test, _, data_origin = read_corpus(os.path.join('.', args.data, 'test_data.txt'), os.path.join('.', args.data, 'test_label.txt'), is_train=False)
 args.label_size = len(tag2label)
 
-train_data = DataLoader(sents_train, labels_train, cuda=args.use_cuda, batch_size=args.batch_size)
-test_data = DataLoader(sents_test, labels_test, cuda=args.use_cuda, shuffle=False, evaluation=True, batch_size=args.batch_size)
+train_data = DataLoader(sents_train, labels_train, batch_size=args.batch_size)
+test_data = DataLoader(sents_test, labels_test, batch_size=args.batch_size, shuffle=False, evaluation=True)
 
-from model import Model 
-model = Model(args)
+model = Model(args.word_size, args.word_ebd_dim, args.lstm_hsz, 
+              args.lstm_layers, args.label_size, args.dropout, args.batch_size)
 
-
+assert (args.use_cuda and args.use_mps) == False, 'cuda and mps can not be enabled at the same time'
 if args.use_cuda:
-    model = model.cuda()
+    args.device = torch.device('cuda')
+elif args.use_mps:
+    args.device = torch.device('mps')
+else:
+    args.device = torch.device('cpu')
+    
+model.to(args.device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98), eps=1e-9, weight_decay=args.l2)
 
@@ -75,12 +83,13 @@ def train():
     model.train()
     total_loss = 0
     for word, label, seq_lengths, _  in train_data:
+        word, label = word.to(args.device), label.to(args.device)
         optimizer.zero_grad()
-        loss, _ = model(word, label, seq_lengths)
+        loss = model(word, label, seq_lengths)
         loss.backward()
         optimizer.step()
 
-        total_loss += loss.detach()
+        total_loss += loss.detach().cpu().item()
     return total_loss / train_data._stop_step
 
 def evaluate(epoch):
@@ -97,7 +106,8 @@ def evaluate(epoch):
         label_list = []
 
         for word, label, seq_lengths, unsort_idx in test_data:
-            loss, _ = model(word, label, seq_lengths)
+            word, label = word.to(args.device), label.to(args.device)
+            loss = model(word, label, seq_lengths)
             pred = model.predict(word, seq_lengths)
             pred = pred[unsort_idx]
             seq_lengths = seq_lengths[unsort_idx]
@@ -106,7 +116,7 @@ def evaluate(epoch):
                 pred_ = list(pred[i][:seq_len].cpu().numpy())
                 label_list.append(pred_)
                 
-            eval_loss += loss.detach().item()
+            eval_loss += loss.detach().cpu().item()
 
             
         for label_, (sent, tag) in zip(label_list, data_origin):
@@ -129,7 +139,7 @@ def evaluate(epoch):
         
         return eval_loss / test_data._stop_step
 
-import time 
+
 train_loss = []
 if args.mode == 'train':
     best_acc = None
@@ -145,8 +155,4 @@ if args.mode == 'train':
                 epoch, time.time() - epoch_start_time, loss))
         eval_loss = evaluate(epoch)
         torch.save(model.state_dict(), args.save)
-
-    # TODO
-    # if args.mode == 'test':
-    #     test()
 

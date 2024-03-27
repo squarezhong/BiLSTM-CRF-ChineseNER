@@ -1,20 +1,18 @@
 import numpy as np
 import torch
-from const import * 
+import const
 
 
 class DataLoader(object):
-    def __init__(self, sents, labels, cuda=True,
-                 batch_size=64, shuffle=True, evaluation=False):
-        self.cuda = cuda
+    def __init__(self, sents, labels, batch_size=64, shuffle=True, evaluation=False):
         self.sents_size = len(sents)
         self._step = 0
         self._stop_step = self.sents_size // batch_size
         self.evaluation = evaluation
 
         self._batch_size = batch_size
-        self._sents = np.asarray(sents)
-        self._label = np.asarray(labels)
+        self._sents = np.asarray(sents, dtype="object")
+        self._label = np.asarray(labels, dtype="object")
 
         if shuffle:
             self._shuffle()
@@ -35,7 +33,7 @@ class DataLoader(object):
             seq_len_list = [len(inst) for inst in insts]
             max_len = max(len(inst) for inst in insts)
             inst_data = np.array(
-            [inst + [PAD] * (max_len - len(inst)) for inst in insts])
+            [inst + [const.PAD] * (max_len - len(inst)) for inst in insts])
 
             if self.evaluation:
                 with torch.no_grad():
@@ -44,8 +42,8 @@ class DataLoader(object):
                 inst_data_tensor = torch.from_numpy(inst_data)
 
             
-            inst_data_tensor = inst_data_tensor.cuda()
-            seq_len = torch.LongTensor(seq_len_list).cuda()
+            inst_data_tensor = inst_data_tensor
+            seq_len = torch.LongTensor(seq_len_list)
 
             return inst_data_tensor, seq_len
 
@@ -60,7 +58,7 @@ class DataLoader(object):
 
         word, seq_len = pad_to_longest(self._sents[_start:_start + _bsz])
         label, _ = pad_to_longest(self._label[_start:_start + _bsz])
-        seq_len, perm_idx = seq_len.sort(0, descending=True)
+        seq_len, perm_idx = seq_len.sort(0, descending=True) 
         word = word[perm_idx]
         label = label[perm_idx]
         _, unsort_idx = perm_idx.sort(0, descending=False)
