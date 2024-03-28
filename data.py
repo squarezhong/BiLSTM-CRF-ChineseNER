@@ -1,4 +1,4 @@
-import sys, pickle, os, random
+import pickle, os
 import numpy as np
 
 ## tags, BIO

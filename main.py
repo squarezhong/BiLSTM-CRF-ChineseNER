@@ -40,7 +40,7 @@ parser.add_argument('--l2', type=float, default=0.005,
 parser.add_argument('--clip', type=float, default=.5,
                     help='gradient clipping')
 parser.add_argument('--result-path', type=str, default='./result',
-                    help='result-path')
+                    help='result path')
 
 args = parser.parse_args()
 
@@ -56,6 +56,11 @@ from eval import conlleval
 
 torch.manual_seed(args.seed)
 
+# check if folder result and checkpoints exist
+if not os.path.exists(args.result_path):
+    os.makedirs(args.result_path)
+if not os.path.exists('./checkpoints'):
+    os.makedirs('./checkpoints')
 
 sents_train, labels_train, args.word_size, _ = read_corpus(os.path.join('.', args.data, 'source_data.txt'), os.path.join('.', args.data, 'source_label.txt'))
 sents_test, labels_test, _, data_origin = read_corpus(os.path.join('.', args.data, 'test_data.txt'), os.path.join('.', args.data, 'test_label.txt'), is_train=False)
