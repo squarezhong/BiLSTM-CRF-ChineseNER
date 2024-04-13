@@ -30,9 +30,10 @@ def gather_index(input, index):
 
 
 class CRF(nn.Module):
-    def __init__(self, label_size):
+    def __init__(self, label_size, device):
         super().__init__()
         self.label_size = label_size
+        self.device = device
         self.transitions = nn.Parameter(
             torch.randn(label_size, label_size))
         self._init_weight()
@@ -55,8 +56,8 @@ class CRF(nn.Module):
         """
         # tags: [bsz, sent_len]
         bsz, sent_len, label_size = input.size()
-        score = torch.FloatTensor(bsz).fill_(0.)
-        s_score = torch.LongTensor([[const.START]] * bsz)
+        score = torch.FloatTensor(bsz).fill_(0.).to(self.device)
+        s_score = torch.LongTensor([[const.START]] * bsz).to(self.device)
         # add START tag 7
         tags = torch.cat([s_score, tags], dim=-1) # [bsz, sent_len + 1]
         input_t = input.transpose(0, 1) # [sent_len, bsz, label_size]
@@ -72,7 +73,7 @@ class CRF(nn.Module):
             score += bsz_t + w_step_score
 
         temp = self.transitions.index_select(1, tags[:, -1])
-        bsz_t = gather_index(temp.transpose(0, 1), torch.LongTensor([const.STOP] * bsz))
+        bsz_t = gather_index(temp.transpose(0, 1), torch.LongTensor([const.STOP] * bsz).to(self.device))
         
         return score + bsz_t
 
@@ -87,7 +88,7 @@ class CRF(nn.Module):
         """
         bsz, sent_len, l_size = input.size()
         init_alphas = torch.FloatTensor(
-            bsz, self.label_size).fill_(-10000.)
+            bsz, self.label_size).fill_(-10000.).to(self.device)
         init_alphas[:, const.START].fill_(0.)
         forward_var = init_alphas # [bsz, label_size]
 
@@ -99,6 +100,9 @@ class CRF(nn.Module):
             for next_tag in range(self.label_size):
                 emit_score = words[:, next_tag].view(-1, 1)
                 trans_score = self.transitions[next_tag].view(1, -1)
+                # # check which device the input is on
+                # print(emit_score.device)
+                # print(trans_score.device)
                 next_tag_var = forward_var + trans_score + emit_score # [bsz, label_size]
                 alphas_t.append(logsumexp_(next_tag_var, True))
             forward_var = torch.cat(alphas_t, dim=-1) # [bsz, label_size]
@@ -124,7 +128,7 @@ class CRF(nn.Module):
         backpointers = []
         bsz, sent_len, l_size = input.size()
 
-        init_vvars = torch.FloatTensor(bsz, self.label_size).fill_(-10000.)
+        init_vvars = torch.FloatTensor(bsz, self.label_size).fill_(-10000.).to(self.device)
         init_vvars[:, const.START].fill_(0.)
         forward_var = init_vvars
 
@@ -187,6 +191,7 @@ class BiLSTM(nn.Module):
     def forward(self, words, seq_lengths):
         encode = self.word_ebd(words)
         # pad the sequence to the longest length
+        seq_lengths = seq_lengths.cpu()
         packed_encode = torch.nn.utils.rnn.pack_padded_sequence(encode, seq_lengths, batch_first=True)
         packed_output, _ = self.lstm(packed_encode)
         output, _ = torch.nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
@@ -196,7 +201,7 @@ class BiLSTM(nn.Module):
 
 class Model(nn.Module):
     def __init__(self, word_size, word_ebd_dim, lstm_hsz, 
-                 lstm_layers, label_size, dropout, batch_size):
+                 lstm_layers, label_size, dropout, batch_size, device):
         super().__init__()
 
         self.word_size = word_size
@@ -206,13 +211,14 @@ class Model(nn.Module):
         self.label_size = label_size
         self.dropout = dropout
         self.batch_size = batch_size
+        self.device = device
         
 
-        self.bilstm = BiLSTM(self.word_size, self.word_ebd_dim,
-                             self.lstm_hsz, self.lstm_layers, self.dropout, self.batch_size)
+        self.bilstm = BiLSTM(self.word_size, self.word_ebd_dim, self.lstm_hsz,
+                             self.lstm_layers, self.dropout, self.batch_size)
 
         self.fc1 = nn.Linear(self.lstm_hsz, self.label_size)
-        self.crf = CRF(self.label_size)
+        self.crf = CRF(self.label_size, self.device)
         self._init_weights()
 
     def forward(self, words, labels, seq_lengths):

@@ -8,7 +8,7 @@ parser.add_argument('--batch-size', type=int, default=64,
                     help='batch size for training')
 parser.add_argument('--seed', type=int, default=1111,
                     help='random seed')
-parser.add_argument('--use-cuda', action='store_true', default=False,
+parser.add_argument('--use-cuda', action='store_true', default=True,
                     help='enables cuda')
 parser.add_argument('--use-mps', action='store_true', default=False,
                     help='enables mps')
@@ -69,9 +69,6 @@ args.label_size = len(tag2label)
 train_data = DataLoader(sents_train, labels_train, batch_size=args.batch_size)
 test_data = DataLoader(sents_test, labels_test, batch_size=args.batch_size, shuffle=False, evaluation=True)
 
-model = Model(args.word_size, args.word_ebd_dim, args.lstm_hsz, 
-              args.lstm_layers, args.label_size, args.dropout, args.batch_size)
-
 assert (args.use_cuda and args.use_mps) == False, 'cuda and mps can not be enabled at the same time'
 if args.use_cuda:
     args.device = torch.device('cuda')
@@ -79,6 +76,11 @@ elif args.use_mps:
     args.device = torch.device('mps')
 else:
     args.device = torch.device('cpu')
+    
+print(args.device)
+
+model = Model(args.word_size, args.word_ebd_dim, args.lstm_hsz, 
+              args.lstm_layers, args.label_size, args.dropout, args.batch_size, args.device)
     
 model.to(args.device)
 
@@ -88,7 +90,7 @@ def train():
     model.train()
     total_loss = 0
     for word, label, seq_lengths, _  in train_data:
-        word, label = word.to(args.device), label.to(args.device)
+        word, label, seq_lengths = word.to(args.device), label.to(args.device), seq_lengths.to(args.device)
         optimizer.zero_grad()
         loss = model(word, label, seq_lengths)
         loss.backward()
