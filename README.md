@@ -51,11 +51,12 @@ P.S. use standard `conlleval.pl` to calculate entity-level precision, recall and
 
 Here's the result at the end of training (32ed epoch):
 ```shell
-processed 13563 tokens with 458 phrases; found: 403 phrases; correct: 332.
-accuracy:  96.79%; precision:  82.38%; recall:  72.49%; FB1:  77.12
-              LOC: precision:  84.56%; recall:  67.74%; FB1:  75.22  149
-              ORG: precision:  78.32%; recall:  67.47%; FB1:  72.49  143
-              PER: precision:  84.68%; recall:  88.68%; FB1:  86.64  111
+processed 13563 tokens with 458 phrases; found: 437 phrases; correct: 356.
+accuracy:  97.10%; 
+ALL: precision:  81.46%; recall:  77.73%; FB1:  79.55  Num: 437
+LOC: precision:  79.10%; recall:  75.27%; FB1:  77.13  Num: 177
+ORG: precision:  75.62%; recall:  72.89%; FB1:  74.23  Num: 160
+PER: precision:  95.00%; recall:  89.62%; FB1:  92.23  Num: 100
 ```
 
 ## TODO

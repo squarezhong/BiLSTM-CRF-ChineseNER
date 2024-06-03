@@ -2,11 +2,11 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='LSTM_CRF')
-parser.add_argument('--epochs', type=int, default=32,
+parser.add_argument('--epochs', type=int, default=64,
                     help='number of epochs for train')
 parser.add_argument('--batch-size', type=int, default=64,
                     help='batch size for training')
-parser.add_argument('--seed', type=int, default=1111,
+parser.add_argument('--seed', type=int, default=789,
                     help='random seed')
 parser.add_argument('--use-cuda', action='store_true', default=True,
                     help='enables cuda')
