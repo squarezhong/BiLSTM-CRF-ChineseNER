@@ -1,5 +1,16 @@
 # BiLSTM-CRF-ChineseNER
-PyTorch implementation of BiLSTM-CRF for Chinese NER
+
+[English](README.md) | [简体中文](README_cn.md)
+
+## Introduction
+
+PyTorch implementation of BiLSTM-CRF for Chinese NER.
+
+**CPU, CUDA, and MPS** are supported.
+
+For the principle of BiLSTM-CRF, you can refer to the paper [Bidirectional LSTM-CRF Models for Sequence Tagging](https://arxiv.org/abs/1508.01991).
+
+You can also refer to the blog [一文读懂BiLSTM+CRF实现命名实体识别](https://paddlepedia.readthedocs.io/en/latest/tutorials/natural_language_processing/ner/bilstm_crf.html) for more details.
 
 ## Requirement: 
 - Python 3.12.2
@@ -11,7 +22,9 @@ PyTorch implementation of BiLSTM-CRF for Chinese NER
 Other versions may also work, but I didn't test.
 
 ## Usage:
-Just run `python main.py --mode=train` 
+Just run `python main.py --mode=train` to start training.
+
+If you want to use GPU, you can add `--use-cuda` or `--use-mps` to the command.
 
 Use `python main.py --help` to see the full list of parameters.
 ```
@@ -49,7 +62,7 @@ options:
 P.S. use standard `conlleval.pl` to calculate entity-level precision, recall and f1-score. For details, you can refer the source codes. 
 
 
-Here's the result at the end of training (32ed epoch):
+Here's the result at the end of training (64ed epoch):
 ```shell
 processed 13563 tokens with 458 phrases; found: 437 phrases; correct: 356.
 accuracy:  97.10%; 

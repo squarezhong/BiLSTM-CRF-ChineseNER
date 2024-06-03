@@ -8,7 +8,7 @@ parser.add_argument('--batch-size', type=int, default=64,
                     help='batch size for training')
 parser.add_argument('--seed', type=int, default=789,
                     help='random seed')
-parser.add_argument('--use-cuda', action='store_true', default=True,
+parser.add_argument('--use-cuda', action='store_true', default=False,
                     help='enables cuda')
 parser.add_argument('--use-mps', action='store_true', default=False,
                     help='enables mps')
@@ -71,8 +71,10 @@ test_data = DataLoader(sents_test, labels_test, batch_size=args.batch_size, shuf
 
 assert (args.use_cuda and args.use_mps) == False, 'cuda and mps can not be enabled at the same time'
 if args.use_cuda:
+    assert(torch.cuda.is_available()==True, 'cuda is not available')
     args.device = torch.device('cuda')
 elif args.use_mps:
+    assert(torch.backends.mps.is_available()==True, 'mps is not available')
     args.device = torch.device('mps')
 else:
     args.device = torch.device('cpu')
